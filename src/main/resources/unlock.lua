@@ -1,3 +1,5 @@
+-- 释放锁的Lua脚本
+
 -- 比较线程标示与锁中的标示是否一致
 if(redis.call('get', KEYS[1]) ==  ARGV[1]) then
     -- 释放锁 del key

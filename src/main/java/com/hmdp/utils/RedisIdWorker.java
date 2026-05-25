@@ -31,12 +31,13 @@ public class RedisIdWorker {
         long timestamp = nowSecond - BEGIN_TIMESTAMP;
 
         // 2.生成序列号
-        // 2.1.获取当前日期，精确到天
+        // 2.1.获取当前日期，精确到天(并分层级)
         String date = now.format(DateTimeFormatter.ofPattern("yyyy:MM:dd"));
         // 2.2.自增长
         long count = stringRedisTemplate.opsForValue().increment("icr:" + keyPrefix + ":" + date);
 
         // 3.拼接并返回
+        // 先移位运算，后使用或运算进行拼接
         return timestamp << COUNT_BITS | count;
     }
 }

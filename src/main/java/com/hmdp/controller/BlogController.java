@@ -6,7 +6,6 @@ import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.Blog;
 import com.hmdp.service.IBlogService;
-import com.hmdp.service.IBlogService2;
 import com.hmdp.utils.SystemConstants;
 import com.hmdp.utils.UserHolder;
 import org.springframework.web.bind.annotation.*;
@@ -15,11 +14,7 @@ import javax.annotation.Resource;
 import java.util.List;
 
 /**
- * <p>
  * 前端控制器
- * </p>
- *
- * @author 虎哥
  */
 @RestController
 @RequestMapping("/blog")

@@ -12,7 +12,7 @@ import com.hmdp.dto.Result;
 import com.hmdp.entity.Shop;
 import com.hmdp.mapper.ShopMapper;
 import com.hmdp.service.IShopService;
-import com.hmdp.utils.CacheClient2;
+import com.hmdp.utils.CacheClient;
 import com.hmdp.utils.RedisData;
 import com.hmdp.utils.SystemConstants;
 import lombok.extern.slf4j.Slf4j;
@@ -35,9 +35,7 @@ import java.util.concurrent.TimeUnit;
 import static com.hmdp.utils.RedisConstants.*;
 
 /**
- * <p>
  * 商户服务实现类
- * </p>
  */
 @Service
 @Slf4j
@@ -49,8 +47,8 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     // 建立线程池，减少线程的创建与销毁
     private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
 
-    @Resource(name = "cacheClient2")
-    private CacheClient2 cacheClient;
+    @Resource
+    private CacheClient cacheClient;
 
     @Override
     public Result queryById(Long id) {
@@ -110,11 +108,26 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
          */
 
         Shop shop = null;
+
+        // 使用缓存工具类解决缓存穿透
+//        shop = cacheClient.queryWithPassThrough
+//                (CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+
+        // 使用缓存工具类（redis互斥锁）解决缓存击穿
+        shop = cacheClient.queryWithMutex
+               (CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+
+        // 使用缓存工具类（逻辑删除）解决缓存击穿
+//        shop = cacheClient.queryWithLogicalExpire
+//               (CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+
         // 基于redis互斥锁解决缓存击穿
 //        shop = queryWithMutex(id);
 
         // 基于逻辑删除方式解决缓存击穿
-        shop = queryWithExpireTime(id);
+//        shop = queryWithExpireTime(id);
+
+
 
         if (shop == null) {
             return Result.fail("店铺不存在！");
@@ -190,8 +203,8 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     /**
      * 释放锁
       */
-    private boolean unLock(String lockKey) {
-        return BooleanUtil.isTrue(stringRedisTemplate.delete(lockKey));
+    private void unLock(String lockKey) {
+        stringRedisTemplate.delete(lockKey);
     }
 
     /**

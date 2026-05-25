@@ -5,7 +5,6 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -44,18 +43,6 @@ public class CacheClient {
         stringRedisTemplate.opsForValue().set(key, JSONUtil.toJsonStr(redisData));
     }
 
-    /**
-     * 缓存穿透
-     * @param keyPrefix
-     * @param id
-     * @param type
-     * @param dbFallback
-     * @param time
-     * @param unit
-     * @return
-     * @param <R>
-     * @param <ID>
-     */
     public <R,ID> R queryWithPassThrough(
             String keyPrefix, ID id, Class<R> type, Function<ID, R> dbFallback, Long time, TimeUnit unit){
         String key = keyPrefix + id;
@@ -71,7 +58,6 @@ public class CacheClient {
             // 返回一个错误信息
             return null;
         }
-
         // 4.不存在，根据id查询数据库
         R r = dbFallback.apply(id);
         // 5.不存在，返回错误
@@ -181,7 +167,8 @@ public class CacheClient {
     }
 
     private boolean tryLock(String key) {
-        Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
+        Boolean flag = stringRedisTemplate
+                .opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
         return BooleanUtil.isTrue(flag);
     }
 

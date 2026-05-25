@@ -4,7 +4,6 @@ import com.hmdp.entity.Shop;
 import com.hmdp.entity.User;
 import com.hmdp.service.impl.ShopServiceImpl;
 import com.hmdp.service.impl.UserServiceImpl;
-import com.hmdp.utils.RedisIdWorker2;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
