@@ -22,8 +22,6 @@ public class BlogController {
 
     @Resource
     private IBlogService blogService;
-    @Resource
-    private IBlogService2 blogService2;
 
     @PostMapping
     public Result saveBlog(@RequestBody Blog blog) {
@@ -32,7 +30,7 @@ public class BlogController {
 
     @PutMapping("/like/{id}")
     public Result likeBlog(@PathVariable("id") Long id) {
-        return blogService2.likeBlog(id);
+        return blogService.likeBlog(id);
     }
 
     @GetMapping("/of/me")
@@ -54,12 +52,12 @@ public class BlogController {
 
     @GetMapping("/{id}")
     public Result queryBlogById(@PathVariable("id") Long id) {
-        return blogService2.queryBlogById(id);
+        return blogService.queryBlogById(id);
     }
 
     @GetMapping("/likes/{id}")
     public Result queryBlogLikes(@PathVariable("id") Long id) {
-        return blogService2.queryBlogLikes(id);
+        return blogService.queryBlogLikes(id);
     }
 
     @GetMapping("/of/user")
@@ -77,6 +75,6 @@ public class BlogController {
     @GetMapping("/of/follow")
     public Result queryBlogOfFollow(
             @RequestParam("lastId") Long max, @RequestParam(value = "offset", defaultValue = "0") Integer offset){
-        return blogService.queryBlogOfFollow2(max, offset);
+        return blogService.queryBlogOfFollow(max, offset);
     }
 }

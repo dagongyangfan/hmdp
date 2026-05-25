@@ -211,35 +211,35 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         return Result.ok(r);
     }
 
-    @Override
-    public Result queryBlogOfFollow2(Long max, Integer offset) {
-
-        // 实现关注推送页面的分页查询
-        // 获取当前用户ID
-        Long userId = UserHolder.getUser().getId();
-        // 根据用户查询推送文章
-        String key = FEED_KEY + userId;
-        Set<ZSetOperations.TypedTuple<String>> typedTuples = stringRedisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, 0, max, offset, 2);
-        if (CollectionUtil.isEmpty(typedTuples)) {
-            return Result.ok();
-        }
-        List<Long> blogIds = new ArrayList<>(typedTuples.size());
-        int os = 1;
-        long minTime = System.currentTimeMillis();
-        for (ZSetOperations.TypedTuple<String> typedTuple : typedTuples) {
-            // 文章笔记Id
-            String value = typedTuple.getValue();
-            blogIds.add(Long.valueOf(value));
-            long time = typedTuple.getScore().longValue();
-            // scope重复 将offset值+1
-            if (minTime == time) {
-                os++;
-            } else {
-                // 上次查询记录scope
-                minTime = time;
-                os = 1;
-            }
-        }
+//    @Override
+//    public Result queryBlogOfFollow2(Long max, Integer offset) {
+//
+//        // 实现关注推送页面的分页查询
+//        // 获取当前用户ID
+//        Long userId = UserHolder.getUser().getId();
+//        // 根据用户查询推送文章
+//        String key = FEED_KEY + userId;
+//        Set<ZSetOperations.TypedTuple<String>> typedTuples = stringRedisTemplate.opsForZSet().reverseRangeByScoreWithScores(key, 0, max, offset, 2);
+//        if (CollectionUtil.isEmpty(typedTuples)) {
+//            return Result.ok();
+//        }
+//        List<Long> blogIds = new ArrayList<>(typedTuples.size());
+//        int os = 1;
+//        long minTime = System.currentTimeMillis();
+//        for (ZSetOperations.TypedTuple<String> typedTuple : typedTuples) {
+//            // 文章笔记Id
+//            String value = typedTuple.getValue();
+//            blogIds.add(Long.valueOf(value));
+//            long time = typedTuple.getScore().longValue();
+//            // scope重复 将offset值+1
+//            if (minTime == time) {
+//                os++;
+//            } else {
+//                // 上次查询记录scope
+//                minTime = time;
+//                os = 1;
+//            }
+//        }
 
         String idStr = StrUtil.join(",", blogIds);
         List<Blog> blogList = query().in("id", blogIds).last("ORDER BY FIELD(id," + idStr + ")").list();
