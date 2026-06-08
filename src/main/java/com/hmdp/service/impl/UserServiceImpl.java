@@ -161,11 +161,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         // 7.1.随机生成token，作为登录令牌
         String token = UUID.randomUUID().toString(true);
         // 7.2.将User对象转为HashMap存储
-        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
-        Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(),
-                CopyOptions.create()
-                        .setIgnoreNullValue(true)
-                        .setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
+        Map<String, Object> userMap = toUserMap(user);
         // 7.3.存储
         String tokenKey = LOGIN_USER_KEY + token;
         stringRedisTemplate.opsForHash().putAll(tokenKey, userMap);
@@ -182,11 +178,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         // 7.1.随机生成token，作为登录令牌
         String token = UUID.randomUUID().toString(true);
         // 7.2.将User对象转为HashMap存储
-        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
-        Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(),
-                CopyOptions.create()
-                        .setIgnoreNullValue(true)
-                        .setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
+        Map<String, Object> userMap = toUserMap(user);
         // 7.3.存储
         String tokenKey = LOGIN_USER_KEY + token;
         stringRedisTemplate.opsForHash().putAll(tokenKey, userMap);
@@ -261,5 +253,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         // 2.保存用户
         save(user);
         return user;
+    }
+
+    private Map<String, Object> toUserMap(User user) {
+        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        Map<String, Object> userMap = new HashMap<>();
+        if (userDTO.getId() != null) {
+            userMap.put("id", userDTO.getId().toString());
+        }
+        if (userDTO.getNickName() != null) {
+            userMap.put("nickName", userDTO.getNickName());
+        }
+        if (userDTO.getIcon() != null) {
+            userMap.put("icon", userDTO.getIcon());
+        }
+        return userMap;
     }
 }
