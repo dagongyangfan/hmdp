@@ -20,12 +20,14 @@ import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.connection.stream.*;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -62,6 +64,7 @@ public class VoucherOrderServiceImpl
     private SeckillVoucherMapper seckillVoucherMapper;
 
     private Integer stock = null;
+    private volatile boolean running = true;
 
     // 线程代理对象，用于开启事务
     IVoucherOrderService proxy;
@@ -87,7 +90,29 @@ public class VoucherOrderServiceImpl
 
     @PostConstruct
     private void init() {
+        initStreamGroup();
         SECKILL_ORDER_EXECUTOR.submit(new VoucherOrderHandler());
+    }
+
+    @PreDestroy
+    private void destroy() {
+        running = false;
+        SECKILL_ORDER_EXECUTOR.shutdownNow();
+    }
+
+    private void initStreamGroup() {
+        try {
+            stringRedisTemplate.execute((RedisCallback<Object>) connection -> {
+                connection.execute("XGROUP", "CREATE".getBytes(), "stream.orders".getBytes(),
+                        "g1".getBytes(), "0".getBytes(), "MKSTREAM".getBytes());
+                return null;
+            });
+        } catch (Exception e) {
+            String message = e.getMessage();
+            if (message == null || !message.contains("BUSYGROUP")) {
+                log.warn("Init Redis stream group failed", e);
+            }
+        }
     }
 
     /**
@@ -98,7 +123,7 @@ public class VoucherOrderServiceImpl
         String queueName = "stream.orders";
         @Override
         public void run() {
-            while (true) {
+            while (running) {
                 try{
                     // 获取消息队列中的订单信息 XREADGROUP GROUP g1 COUNT 1 BLOCK 2000 STREAMS xxx >
                     List<MapRecord<String, Object, Object>> list =  stringRedisTemplate.opsForStream().read(
@@ -107,7 +132,7 @@ public class VoucherOrderServiceImpl
                             StreamOffset.create(queueName, ReadOffset.lastConsumed())
                     );
                     // 判断是否获取成功
-                    if (list != null || !list.isEmpty()) {
+                    if (list == null || list.isEmpty()) {
                         // 如果失败。说明没有消息，继续下一次循环
                         continue;
                     }
@@ -121,6 +146,9 @@ public class VoucherOrderServiceImpl
                     // ACK确认 SACK stream.orders g1 id
                     stringRedisTemplate.opsForStream().acknowledge(queueName, "g1", record.getId());
                 }catch(Exception e){
+                    if (!running) {
+                        break;
+                    }
                     log.error("订单处理异常！", e);
                     handlePendingList();
                 }
@@ -128,7 +156,7 @@ public class VoucherOrderServiceImpl
         }
 
         private void handlePendingList() {
-            while (true) {
+            while (running) {
                 try{
                     // 获取PendingList中的订单信息 XREADGROUP GROUP g1 COUNT 1 BLOCK 2000 STREAMS xxx >
                     List<MapRecord<String, Object, Object>> list =  stringRedisTemplate.opsForStream().read(
@@ -137,7 +165,7 @@ public class VoucherOrderServiceImpl
                             StreamOffset.create(queueName, ReadOffset.from("0"))
                     );
                     // 判断是否获取成功
-                    if (list != null || !list.isEmpty()) {
+                    if (list == null || list.isEmpty()) {
                         // 如果失败。说明PendingList没有消息，结束循环
                         break;
                     }
@@ -151,11 +179,15 @@ public class VoucherOrderServiceImpl
                     // ACK确认 SACK stream.orders g1 id
                     stringRedisTemplate.opsForStream().acknowledge(queueName, "g1", record.getId());
                 }catch(Exception e){
+                    if (!running) {
+                        break;
+                    }
                     log.error("处理PendingList订单抛出异常！", e);
                     try{
                         Thread.sleep(2000);
                     }catch(InterruptedException ie) {
-                        ie.printStackTrace();
+                        Thread.currentThread().interrupt();
+                        break;
                     }
 
                 }

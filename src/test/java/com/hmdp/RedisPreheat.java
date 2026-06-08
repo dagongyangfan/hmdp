@@ -4,6 +4,7 @@ import com.hmdp.entity.Shop;
 import com.hmdp.entity.User;
 import com.hmdp.service.impl.ShopServiceImpl;
 import com.hmdp.service.impl.UserServiceImpl;
+import com.hmdp.utils.RedisIdWorker;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -24,7 +25,7 @@ public class RedisPreheat {
     private UserServiceImpl userService;
 
     @Resource
-    private RedisIdWorker2 redisIdWorker2;
+    private RedisIdWorker redisIdWorker;
 
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(500);
 
@@ -74,7 +75,7 @@ public class RedisPreheat {
 
         Runnable task = () -> {
             for (int i = 0; i < 100; i++) {
-                long order = redisIdWorker2.nextId("order");
+                long order = redisIdWorker.nextId("order");
                 System.out.println("order = " + order);
             }
             countDownLatch.countDown();
